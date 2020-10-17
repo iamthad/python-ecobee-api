@@ -49,12 +49,9 @@ class Ecobee(object):
         if self.config:
             self._file_based_config = False
             self.api_key = self.config[ECOBEE_API_KEY]
-            if ECOBEE_ACCESS_TOKEN in self.config:
-                self.access_token = self.config[ECOBEE_ACCESS_TOKEN]
-            if ECOBEE_AUTHORIZATION_CODE in self.config:
-                self.authorization_code = self.config[ECOBEE_AUTHORIZATION_CODE]
-            if ECOBEE_REFRESH_TOKEN in self.config:
-                self.refresh_token = self.config[ECOBEE_REFRESH_TOKEN]
+            self.access_token = self.config.get(ECOBEE_ACCESS_TOKEN)
+            self.authorization_code = self.config.get(ECOBEE_AUTHORIZATION_CODE)
+            self.refresh_token = self.config.get(ECOBEE_REFRESH_TOKEN)
             if ECOBEE_OPTIONS_NOTIFICATIONS in self.config:
                 self.include_notifications = convert_to_bool(self.config[ECOBEE_OPTIONS_NOTIFICATIONS])
         else:
@@ -65,12 +62,9 @@ class Ecobee(object):
         if self._file_based_config:
             self.config = config_from_file(self.config_filename)
             self.api_key = self.config[ECOBEE_API_KEY]
-            if ECOBEE_ACCESS_TOKEN in self.config:
-                self.access_token = self.config[ECOBEE_ACCESS_TOKEN]
-            if ECOBEE_AUTHORIZATION_CODE in self.config:
-                self.authorization_code = self.config[ECOBEE_AUTHORIZATION_CODE]
-            if ECOBEE_REFRESH_TOKEN in self.config:
-                self.refresh_token = self.config[ECOBEE_REFRESH_TOKEN]
+            self.access_token = self.config.get(ECOBEE_ACCESS_TOKEN)
+            self.authorization_code = self.config.get(ECOBEE_AUTHORIZATION_CODE)
+            self.refresh_token = self.config.get(ECOBEE_REFRESH_TOKEN)
             if ECOBEE_OPTIONS_NOTIFICATIONS in self.config:
                 self.include_notifications = convert_to_bool(self.config[ECOBEE_OPTIONS_NOTIFICATIONS])
 
