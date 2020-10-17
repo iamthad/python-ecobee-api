@@ -48,12 +48,7 @@ class Ecobee(object):
 
         if self.config:
             self._file_based_config = False
-            self.api_key = self.config[ECOBEE_API_KEY]
-            self.access_token = self.config.get(ECOBEE_ACCESS_TOKEN)
-            self.authorization_code = self.config.get(ECOBEE_AUTHORIZATION_CODE)
-            self.refresh_token = self.config.get(ECOBEE_REFRESH_TOKEN)
-            if ECOBEE_OPTIONS_NOTIFICATIONS in self.config:
-                self.include_notifications = convert_to_bool(self.config[ECOBEE_OPTIONS_NOTIFICATIONS])
+            self._load_config()
         else:
             self._file_based_config = True
 
@@ -61,12 +56,15 @@ class Ecobee(object):
         """Reads config info from passed-in config filename."""
         if self._file_based_config:
             self.config = config_from_file(self.config_filename)
-            self.api_key = self.config[ECOBEE_API_KEY]
-            self.access_token = self.config.get(ECOBEE_ACCESS_TOKEN)
-            self.authorization_code = self.config.get(ECOBEE_AUTHORIZATION_CODE)
-            self.refresh_token = self.config.get(ECOBEE_REFRESH_TOKEN)
-            if ECOBEE_OPTIONS_NOTIFICATIONS in self.config:
-                self.include_notifications = convert_to_bool(self.config[ECOBEE_OPTIONS_NOTIFICATIONS])
+            self._load_config()
+
+    def _load_config(self) -> None:
+        self.api_key = self.config[ECOBEE_API_KEY]
+        self.access_token = self.config.get(ECOBEE_ACCESS_TOKEN)
+        self.authorization_code = self.config.get(ECOBEE_AUTHORIZATION_CODE)
+        self.refresh_token = self.config.get(ECOBEE_REFRESH_TOKEN)
+        if ECOBEE_OPTIONS_NOTIFICATIONS in self.config:
+            self.include_notifications = convert_to_bool(self.config[ECOBEE_OPTIONS_NOTIFICATIONS])
 
     def _write_config(self) -> None:
         """Writes API tokens to a file or self.config if self.file_based_config is False."""
