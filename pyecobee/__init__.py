@@ -212,37 +212,43 @@ class Ecobee(object):
         """Gets new thermostat data from ecobee; wrapper for get_thermostats."""
         return self.get_thermostats()
 
-    def set_hvac_mode(self, index: int, hvac_mode: str) -> None:
-        """Sets the HVAC mode (auto, auxHeatOnly, cool, heat, off)."""
+    def post_update(
+        self,
+        index: int,
+        log_msg_action: str,
+        *,
+        props: dict = None,
+        funcs: list = None,
+    ) -> None:
+        """Update writable Thermostat properties and/or call functions."""
         body = {
             "selection": {
                 "selectionType": "thermostats",
                 "selectionMatch": self.thermostats[index]["identifier"],
             },
-            "thermostat": {"settings": {"hvacMode": hvac_mode}},
         }
-        log_msg_action = "set HVAC mode"
-
+        if props:
+            body["thermostat"] = props
+        if funcs:
+            body["functions"] = funcs
         try:
             self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
         except (ExpiredTokenError, InvalidTokenError) as err:
             raise err
+
+    def set_hvac_mode(self, index: int, hvac_mode: str) -> None:
+        """Sets the HVAC mode (auto, auxHeatOnly, cool, heat, off)."""
+        self.post_update(
+            index, "set HVAC mode", props={"settings": {"hvacMode": hvac_mode}}
+        )
 
     def set_fan_min_on_time(self, index: int, fan_min_on_time: int) -> None:
         """Sets the minimum time, in minutes, to run the fan each hour (1 to 60)."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "thermostat": {"settings": {"fanMinOnTime": fan_min_on_time}},
-        }
-        log_msg_action = "set fan minimum on time"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index,
+            "set fan minimum on time",
+            props={"settings": {"fanMinOnTime": fan_min_on_time}},
+        )
 
     def set_fan_mode(
         self,
@@ -253,12 +259,10 @@ class Ecobee(object):
         hold_type: str = "nextTransition",
     ) -> None:
         """Sets the fan mode (auto, minontime, on)."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "functions": [
+        self.post_update(
+            index,
+            "set fan mode",
+            funcs=[
                 {
                     "type": "setHold",
                     "params": {
@@ -269,13 +273,7 @@ class Ecobee(object):
                     },
                 }
             ],
-        }
-        log_msg_action = "set fan mode"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        )
 
     def set_hold_temp(
         self,
@@ -286,53 +284,32 @@ class Ecobee(object):
         hold_hours: str = "2",
     ) -> None:
         """Sets a hold temperature."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
+        f = {
+            "type": "setHold",
+            "params": {
+                "holdType": hold_type,
+                "coolHoldTemp": int(cool_temp * 10),
+                "heatHoldTemp": int(heat_temp * 10),
             },
-            "functions": [
-                {
-                    "type": "setHold",
-                    "params": {
-                        "holdType": hold_type,
-                        "coolHoldTemp": int(cool_temp * 10),
-                        "heatHoldTemp": int(heat_temp * 10),
-                    },
-                }
-            ],
         }
         if hold_type == "holdHours":
-            body["functions"][0]["params"]["holdHours"] = hold_hours
-        log_msg_action = "set hold temp"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+            f["params"]["holdHours"] = hold_hours
+        self.post_update(index, "set hold temp", functions=[f])
 
     def set_climate_hold(
         self, index: int, climate: str, hold_type: str = "nextTransition"
     ) -> None:
         """Sets a climate hold (away, home, sleep)."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "functions": [
+        self.post_update(
+            index,
+            "set climate hold",
+            funcs=[
                 {
                     "type": "setHold",
-                    "params": {"holdType": hold_type, "holdClimateRef": climate},
+                    "params": {"holdType": hold_type, "holdClimateRef": climate,},
                 }
             ],
-        }
-        log_msg_action = "set climate hold"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        )
 
     def create_vacation(
         self,
@@ -348,12 +325,10 @@ class Ecobee(object):
         fan_min_on_time: str = "0",
     ) -> None:
         """Creates a vacation."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "functions": [
+        self.post_update(
+            index,
+            "create a vacation",
+            funcs=[
                 {
                     "type": "createVacation",
                     "params": {
@@ -369,134 +344,61 @@ class Ecobee(object):
                     },
                 }
             ],
-        }
-        log_msg_action = "create a vacation"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        )
 
     def delete_vacation(self, index: int, vacation: str) -> None:
         """Deletes a vacation."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "functions": [{"type": "deleteVacation", "params": {"name": vacation}}],
-        }
-        log_msg_action = "delete a vacation"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index,
+            "delete a vacation",
+            funcs=[{"type": "deleteVacation", "params": {"name": vacation}}],
+        )
 
     def resume_program(self, index: int, resume_all: bool = False) -> None:
         """Resumes the currently scheduled program."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "functions": [
-                {"type": "resumeProgram", "params": {"resumeAll": resume_all}}
-            ],
-        }
-        log_msg_action = "resume program"
+        self.post_update(
+            index,
+            "resume program",
+            funcs=[{"type": "resumeProgram", "params": {"resumeAll": resume_all}}],
+        )
 
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
-
-    def send_message(self, index: int, message: str = None) -> None:
+    def send_message(self, index: int, message: str = "Hello from pyecobee!") -> None:
         """Sends the first 500 characters of a message to the thermostat."""
-        if message is None:
-            message = "Hello from pyecobee!"
-
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "functions": [{"type": "sendMessage", "params": {"text": message[0:500]}}],
-        }
-        log_msg_action = "send message"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index,
+            "send message",
+            funcs=[{"type": "sendMessage", "params": {"text": message[:500]}}],
+        )
 
     def set_humidity(self, index: int, humidity: str) -> None:
         """Sets target humidity level."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "thermostat": {"settings": {"humidity": str(humidity)}},
-        }
-        log_msg_action = "set humidity level"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index,
+            "set humidity level",
+            props={"settings": {"humidity": str(humidity)}},
+        )
 
     def set_mic_mode(self, index: int, mic_enabled: bool) -> None:
         """Enables/Disables Alexa microphone (only for ecobee4)."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "thermostat": {"audio": {"microphoneEnabled": mic_enabled}},
-        }
-        log_msg_action = "set mic mode"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index, "set mic mode", props={"audio": {"microphoneEnabled": mic_enabled}},
+        )
 
     def set_occupancy_modes(
         self, index: int, auto_away: bool = None, follow_me: bool = None
     ) -> None:
         """Enables/Disables Smart Home/Away and Follow Me modes."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "thermostat": {
-                "settings": {"autoAway": auto_away, "followMeComfort": follow_me}
-            },
-        }
-        log_msg_action = "set occupancy modes"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index,
+            "set occupancy modes",
+            props={"settings": {"autoAway": auto_away, "followMeComfort": follow_me,}},
+        )
 
     def set_dst_mode(self, index: int, enable_dst: bool) -> None:
         """Enables/Disables daylight savings time."""
-        body = {
-            "selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]["identifier"],
-            },
-            "thermostat": {"location": {"isDaylightSaving": enable_dst}},
-        }
-        log_msg_action = "set dst mode"
-
-        try:
-            self._request("POST", ECOBEE_ENDPOINT_THERMOSTAT, log_msg_action, body=body)
-        except (ExpiredTokenError, InvalidTokenError) as err:
-            raise err
+        self.post_update(
+            index, "set dst mode", props={"location": {"isDaylightSaving": enable_dst}}
+        )
 
     def _request(
         self,
