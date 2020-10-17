@@ -286,41 +286,24 @@ class Ecobee(object):
         hold_hours: str = "2",
     ) -> None:
         """Sets a hold temperature."""
+        body = {
+            "selection": {
+                "selectionType": "thermostats",
+                "selectionMatch": self.thermostats[index]["identifier"],
+            },
+            "functions": [
+                {
+                    "type": "setHold",
+                    "params": {
+                        "holdType": hold_type,
+                        "coolHoldTemp": int(cool_temp * 10),
+                        "heatHoldTemp": int(heat_temp * 10),
+                    },
+                }
+            ],
+        }
         if hold_type == "holdHours":
-            body = {
-                "selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]["identifier"],
-                },
-                "functions": [
-                    {
-                        "type": "setHold",
-                        "params": {
-                            "holdType": hold_type,
-                            "coolHoldTemp": int(cool_temp * 10),
-                            "heatHoldTemp": int(heat_temp * 10),
-                            "holdHours": hold_hours,
-                        },
-                    }
-                ],
-            }
-        else:
-            body = {
-                "selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]["identifier"],
-                },
-                "functions": [
-                    {
-                        "type": "setHold",
-                        "params": {
-                            "holdType": hold_type,
-                            "coolHoldTemp": int(cool_temp * 10),
-                            "heatHoldTemp": int(heat_temp * 10),
-                        },
-                    }
-                ],
-            }
+            body["functions"][0]["params"]["holdHours"] = hold_hours
         log_msg_action = "set hold temp"
 
         try:
